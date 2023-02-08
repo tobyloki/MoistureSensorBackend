@@ -24,13 +24,13 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Architectures:
-        - x86_64
+        - arm64
       FunctionName: !Sub ${AWS::StackName}-Scheduler
       Description: Scheduler for actuator off expiration
-      Handler: main
-      Runtime: go1.x
+      Handler: bootstrap
+      Runtime: provided.al2
       Role: !GetAtt LambdaExecutionRole.Arn
       MemorySize: 256
       Timeout: 10
       ReservedConcurrentExecutions: 5
-      CodeUri: ./bin/
+      CodeUri: ./Scheduler/
