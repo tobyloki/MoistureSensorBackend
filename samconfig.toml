@@ -1,0 +1,12 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "MoistureSensorApi"
+s3_bucket = "moisture-sensor-backend"
+s3_prefix = "cloudformation"
+region = "us-west-2"
+profile = "aws-osuapp"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+image_repositories = []

@@ -18,7 +18,7 @@ Resources:
               - sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  
+
   # Lambda functions
   LambdaApiHandler:
     Type: AWS::Serverless::Function
@@ -33,7 +33,7 @@ Resources:
       MemorySize: 256
       Timeout: 10
       ReservedConcurrentExecutions: 5
-      CodeUri: ./MoistureSensorApi/bin/Release/net6.0/linux-arm64/publish/
+      CodeUri: ./MoistureSensorApi/
       FunctionUrlConfig:
         AuthType: NONE
 

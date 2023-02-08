@@ -1,13 +1,13 @@
-# Moisture Sensor Backend
+# Moisture Sensor API
 
-Build API Backend (`MoistureSensorApi.dll` located at `MoistureSensorApi/bin/Release/.net6.0/linux-arm64/publish`)
+Build (`MoistureSensorApi.dll` located at `.aws-sam/build`)
 
 ```cmd
-dotnet publish -c Release --self-contained false -r linux-arm64
+sam build --template-file cloudformation.yaml
 ```
 
 Deploy cloudformation template to AWS from within root directory.
 
 ```cmd
-sam deploy --template-file cloudformation.yaml --capabilities CAPABILITY_NAMED_IAM --stack-name MoistureSensor --s3-bucket moisture-sensor-backend --s3-prefix cloudformation --profile aws-osuapp
+sam deploy --config-file samconfig.toml --capabilities CAPABILITY_NAMED_IAM --no-confirm-changeset
 ```
