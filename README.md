@@ -37,16 +37,16 @@ chkconfig docker on
 docker pull tobyloki/moisture-sensor-scheduler:latest
 ```
 
-5. Run the container (this command will also restart the container at startup even if the EC2 instance is restarted)
+5. Run the container. This command will also restart the container at startup even if the EC2 instance is restarted. It also forwards all logs to cloudwatch logs.
 
 ```bash
-docker run -d --name schedulerContainer --restart unless-stopped tobyloki/moisture-sensor-scheduler:latest
+docker run -d --name schedulerContainer --restart unless-stopped --log-driver=awslogs --log-opt awslogs-region=us-west-2 --log-opt awslogs-group=moisture-sensor-scheduler --log-opt awslogs-create-group=true tobyloki/moisture-sensor-scheduler:latest
 ```
 
 Extra stuff
 
 ```bash
-docker rm schedulerContainer
+docker rm -f schedulerContainer
 
 docker logs --follow schedulerContainer
 ```
