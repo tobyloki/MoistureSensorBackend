@@ -1,4 +1,4 @@
-# Moisture Sensor Scheduler
+# Moisture Sensor ResetActuator
 
 Build (`main` executable located in `bin`)
 
