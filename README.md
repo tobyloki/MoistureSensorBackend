@@ -18,7 +18,7 @@ docker push tobyloki/moisture-sensor-scheduler:latest
 
 EC2 Deployment
 
-1. Launch EC2 instance with Linux AMI v2
+1. Launch EC2 instance with Linux AMI v2 arm64
 2. Add this under user data under advanced details (this install Docker and starts the service)
 
 ```bash
