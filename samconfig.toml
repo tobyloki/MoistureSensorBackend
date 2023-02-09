@@ -2,7 +2,7 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "MoistureSensorResetActuator"
+stack_name = "MoistureSensorIotEventHandler"
 s3_bucket = "moisture-sensor-backend"
 s3_prefix = "cloudformation"
 region = "us-west-2"
