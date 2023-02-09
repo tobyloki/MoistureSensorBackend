@@ -18,7 +18,7 @@ docker push tobyloki/moisture-sensor-scheduler:latest
 
 EC2 Deployment
 
-1. Launch EC2 instance with Linux AMI v2 arm64
+1. Launch EC2 instance with Linux AMI v2 arm64 on t4g.small instance
 2. Add this under user data under advanced details (this install Docker and starts the service)
 
 ```bash
@@ -30,7 +30,7 @@ usermod -a -G docker ec2-user
 chkconfig docker on
 ```
 
-3. Attach IAM role with permissions to access SQS
+3. Attach IAM role with permissions to access SQS and AWSLambdaBasicExecutionRole (for cloudwatch logs)
 4. SSH into instance and pull the image
 
 ```bash
