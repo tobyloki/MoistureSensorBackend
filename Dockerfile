@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine3.17
+FROM golang:1.20-alpine3.17 AS build
 
 # Set destination for COPY
 WORKDIR /app
@@ -13,7 +13,13 @@ RUN go mod download
 COPY *.go ./
 
 # Build
-RUN go build -o main
+RUN go build -o /main
 
-# Run
-CMD [ "./main" ]
+## Deploy
+FROM gcr.io/distroless/base-debian10
+
+WORKDIR /
+
+COPY --from=build /main /main
+
+ENTRYPOINT ["/main"]
