@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Lambda
+Parameters:
+  SqsResetActuator:
+    Type: String
+    Description: SQS queue ARN for ResetActuator
+    Default: arn:aws:sqs:us-west-2:978103014270:MoistureSensorTimerExpired
 Resources:
   # IAM
   LambdaExecutionRole:
@@ -16,21 +21,42 @@ Resources:
                 - lambda.amazonaws.com
             Action:
               - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-SQSPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                Resource: !Ref SqsResetActuator
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   # Lambda functions
-  LambdaScheduler:
+  LambdaResetActuator:
     Type: AWS::Serverless::Function
     Properties:
       Architectures:
         - arm64
-      FunctionName: !Sub ${AWS::StackName}-Scheduler
-      Description: Scheduler for actuator off expiration
+      FunctionName: !Sub ${AWS::StackName}-ResetActuator
+      Description: ResetActuator for actuator off expiration
       Handler: bootstrap
       Runtime: provided.al2
       Role: !GetAtt LambdaExecutionRole.Arn
       MemorySize: 256
       Timeout: 10
       ReservedConcurrentExecutions: 5
-      CodeUri: ./Scheduler/
+      CodeUri: ./ResetActuator/
+
+  # SQS trigger
+  SqsResetActuatorDequeueInstanceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      Enabled: true
+      EventSourceArn: !Ref SqsResetActuator
+      FunctionName: !GetAtt LambdaResetActuator.Arn
+      BatchSize: '1'

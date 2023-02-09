@@ -1,4 +1,4 @@
-module scheduler
+module resetactuator
 
 go 1.20
 
