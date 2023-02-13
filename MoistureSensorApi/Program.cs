@@ -1,12 +1,13 @@
 ﻿using System.Net;
 using System.Text;
-using System.Text.Json;
 using Amazon;
 using Amazon.IotData;
 using Amazon.IotData.Model;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
+using Newtonsoft.Json;
 using HttpContext = Microsoft.AspNetCore.Http.HttpContext;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace MoistureSensorApi;
 
@@ -21,6 +22,12 @@ public static class Program
     // check if in development
     private static readonly bool InDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
     private static readonly AmazonIotDataClient IotClient = InDevelopment ? new AmazonIotDataClient(ServiceUrl, Credentials) : new AmazonIotDataClient(ServiceUrl);
+    
+    // https://learn.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-7.0
+    private static readonly ILogger Logger = LoggerFactory.Create(config =>
+    {
+        config.AddConsole();
+    }).CreateLogger("MoistureSensorApi");
 
     public static void Main(string[] args)
     {
@@ -50,13 +57,7 @@ public static class Program
 
         app.UseAuthorization();
         
-        // https://learn.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-7.0
-        var logger = LoggerFactory.Create(config =>
-        {
-            config.AddConsole();
-        }).CreateLogger("Program");
-        
-        logger.LogInformation("In development: {IsDevelopment}", InDevelopment);
+        Logger.LogInformation("In development: {IsDevelopment}", InDevelopment);
 
         app.MapGet("/report-data/{deviceId}", async (HttpContext httpContext, string deviceId, int temperature, int pressure, int moisture) =>
         {
@@ -70,6 +71,28 @@ public static class Program
                 
                 try
                 {
+                    // print out device id
+                    Logger.LogInformation("Device ID: {DeviceId}", deviceId);
+                    
+                    dynamic responseJson = await HttpRequest(deviceId) ?? throw new InvalidOperationException();
+                    
+                    // parse responseJson.data.getSensor
+                    var getSensor = responseJson.data.getSensor;
+                    
+                    // check if device exists
+                    if (getSensor == null)
+                    {
+                        throw new Exception("Device does not exist");
+                    }
+                    
+                    // get thing name
+                    var thingName = getSensor.thingName.Value as string;
+                    Logger.LogInformation("Thing name: {ThingName}", thingName);
+                    if (thingName == null)
+                    {
+                        throw new Exception("Thing name is null");
+                    }
+
                     // make memory stream in format { "state": { "reported": { "temperature": 0, "pressure": 0, "moisture": 0 } } }
                     var shadow = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
                     {
@@ -84,15 +107,15 @@ public static class Program
                         }
                     })));
 
-                    var response = await UpdateShadow(deviceId, shadow);
+                    var response = await UpdateShadow(thingName, shadow);
                     
                     // log the response
-                    logger.LogInformation("Update shadow response: {Response}", response);
+                    Logger.LogInformation("Update shadow response: {Response}", response);
                 }
                 catch (Exception e)
                 {
                     // log the error
-                    logger.LogError("Failed to update shadow: {Error}", e);
+                    Logger.LogError("Error: {Error}", e);
                     // return json in format: { "error": "Failed to update shadow" }
                     return Results.BadRequest(new
                     {
@@ -108,12 +131,50 @@ public static class Program
         app.Run();
     }
 
-    private static async Task<string> UpdateShadow(string deviceId, MemoryStream shadow)
+    private static async Task<object?> HttpRequest(string deviceId)
+    {
+        // make an http request to a graphql endpoint with x-api-key header
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://7h6nr2h6n5amtaadd5db7gbu2i.appsync-api.us-west-2.amazonaws.com/graphql");
+        
+        // add the x-api-key header
+        request.Headers.Add("x-api-key", "da2-gnn7q3s2izhrnis7hypn3zt7ue");
+        
+        // add the body
+        request.Content = new StringContent(JsonSerializer.Serialize(new
+        {
+            query = $"query MyQuery {{ getSensor(id: \"{deviceId}\") {{ thingName }} }}"
+        }), Encoding.UTF8, "application/json");
+        
+        // print out the request data
+        Logger.LogInformation("Get device request: {Request}", await request.Content.ReadAsStringAsync());
+        
+        // send the request
+        var response = await new HttpClient().SendAsync(request);
+        
+        // check the response
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            throw new Exception("Status code not OK: " + response.StatusCode);
+        }
+        
+        // read the response
+        var responseString = await response.Content.ReadAsStringAsync();
+        
+        // log the response
+        Logger.LogInformation("Get device response: {Response}", responseString);
+        
+        // deserialize the response
+        var responseJson = JsonConvert.DeserializeObject(responseString);
+        
+        return responseJson;
+    }
+
+    private static async Task<string> UpdateShadow(string thingName, MemoryStream shadow)
     {
         // create a request to update the shadow
         var updateShadowRequest = new UpdateThingShadowRequest
         {
-            ThingName = deviceId,
+            ThingName = thingName,
             Payload = shadow
         };
         
