@@ -72,11 +72,11 @@ func handler(ctx context.Context, event map[string]interface{}) error {
 
 	// set the queue names
 	schedulerQueue := "MoistureSensorScheduler"
-	resetActuatorQueue := "MoistureSensorUpdateActuator"
+	updateActuatorQueue := "MoistureSensorUpdateActuator"
 
 	// print out the queue names
 	fmt.Println("Scheduler queue:", schedulerQueue)
-	fmt.Println("ResetActuator queue:", resetActuatorQueue)
+	fmt.Println("UpdateActuator queue:", updateActuatorQueue)
 
 	// get actuators associated to sensor
 	actuatorList, err := getActuators((*sensor).Id)
@@ -107,7 +107,7 @@ func handler(ctx context.Context, event map[string]interface{}) error {
 				}
 
 				// send SQS to scheduler
-				message := SchedulerMessage{actuator.ActuatorId, actuator.GranularityValue, actuator.GranularityUnit}
+				message := SchedulerMessage{thingName, actuator.ActuatorId, actuator.GranularityValue, actuator.GranularityUnit}
 				messageBytes, err := json.Marshal(message)
 				if err != nil {
 					fmt.Println("Error marshalling message:", err)
@@ -118,23 +118,23 @@ func handler(ctx context.Context, event map[string]interface{}) error {
 					}
 				}
 
-				// also send SQS to ResetActuator
-				message2 := ResetActuatorMessage{actuator.ActuatorId, "state", "off"}
+				// also send SQS to UpdateActuator
+				message2 := UpdateActuatorMessage{actuator.ActuatorId, "state", "off"}
 				messageBytes2, err := json.Marshal(message2)
 				if err != nil {
 					fmt.Println("Error marshalling message:", err)
 				} else {
-					err = sendSQS(sess, &resetActuatorQueue, messageBytes2)
+					err = sendSQS(sess, &updateActuatorQueue, messageBytes2)
 					if err != nil {
-						fmt.Println(resetActuatorQueue, "- Error sending SQS:", err)
+						fmt.Println(updateActuatorQueue, "- Error sending SQS:", err)
 					}
 				}
 
 				fmt.Println(actuator.ActuatorId, "- Actuator updated to state off")
 			} else {
-				// if actuator turning on and not expired, send SQS to ResetActuator
+				// if actuator turning on and not expired, send SQS to UpdateActuator
 
-				message := ResetActuatorMessage{actuator.ActuatorId, "state", "on"}
+				message := UpdateActuatorMessage{actuator.ActuatorId, "state", "on"}
 				messageBytes, err := json.Marshal(message)
 				if err != nil {
 					fmt.Println("Error marshalling message:", err)
@@ -157,9 +157,9 @@ func handler(ctx context.Context, event map[string]interface{}) error {
 
 					if sendSqsFlag {
 						// send SQS
-						err = sendSQS(sess, &resetActuatorQueue, messageBytes)
+						err = sendSQS(sess, &updateActuatorQueue, messageBytes)
 						if err != nil {
-							fmt.Println(resetActuatorQueue, "- Error sending SQS:", err)
+							fmt.Println(updateActuatorQueue, "- Error sending SQS:", err)
 						}
 
 						fmt.Println(actuator.ActuatorId, "- Actuator updated to state on")
