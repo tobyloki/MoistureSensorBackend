@@ -93,19 +93,19 @@ func main() {
 	log.Info("Initialized...")
 
 	// Get URL of queue
-	rcvUrlResult, err := GetQueueURL(svc, schedulerQueue)
+	schedulerUrlResult, err := GetQueueURL(svc, schedulerQueue)
 	if err != nil {
 		log.Error("Error getting the queue URL:", err)
 		return
 	}
-	sendUrlResult, err := GetQueueURL(svc, resetActuatorQueue)
+	resetActuatorUrlResult, err := GetQueueURL(svc, resetActuatorQueue)
 	if err != nil {
 		log.Error("Error getting the queue URL:", err)
 		return
 	}
 
-	schedulerQueueURL := rcvUrlResult.QueueUrl
-	resetActuatorQueueURL := sendUrlResult.QueueUrl
+	schedulerQueueURL := schedulerUrlResult.QueueUrl
+	resetActuatorQueueURL := resetActuatorUrlResult.QueueUrl
 
 	// look forever, waiting 1 second between checks
 	skipSleepFirstRound := true
@@ -221,7 +221,7 @@ func handleMsg(svc *sqs.SQS, queueURL *string, message SchedulerMessage) error {
 }
 
 func timerCb(sensorThingName string, actuatorId string, svc *sqs.SQS, queueURL *string) {
-	log.Info(actuatorId, "- Timer expired. Sending message to:", queueURL)
+	log.Info(actuatorId, "- Timer expired. Sending message to:", *queueURL)
 	message := ResetActuatorMessage{sensorThingName, actuatorId}
 	messageBytes, err := json.Marshal(message)
 	if err != nil {
