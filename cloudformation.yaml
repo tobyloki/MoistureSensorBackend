@@ -40,9 +40,9 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - sqs:ReceiveMessage
-                  - sqs:DeleteMessage
-                  - sqs:GetQueueAttributes
+                  - sqs:PublishMessage
+                  - sqs:SendMessage
+                  - sqs:SendMessageBatch
                   - sqs:GetQueueUrl
                 Resource:
                   - !Ref SqsScheduler
