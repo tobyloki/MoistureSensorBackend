@@ -13,11 +13,11 @@ protoc --go_out=. --go_opt=paths=source_relative \
 - Run server and client
 
 ```bash
-go run server/server.go
+go run server/*.go
 ```
 
 ```bash
-go run client/client.go
+go run client/*.go
 ```
 
 # Docker
@@ -62,6 +62,10 @@ docker pull tobyloki/moisture-sensor-grpc-server:latest
 5. Run the container. This command will also restart the container at startup even if the EC2 instance is restarted. It also forwards all logs to cloudwatch logs.
 
 ```bash
+# Without aws cloudwatch logs
+docker run -d --publish 50051:50051 --name grpc-serverContainer --restart unless-stopped tobyloki/moisture-sensor-grpc-server:latest
+
+# With aws cloudwatch logs
 docker run -d --publish 50051:50051 --name grpc-serverContainer --restart unless-stopped --log-driver=awslogs --log-opt awslogs-region=us-west-2 --log-opt awslogs-group=moisture-sensor-grpc-server --log-opt awslogs-create-group=true tobyloki/moisture-sensor-grpc-server:latest
 ```
 

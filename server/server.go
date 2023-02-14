@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
@@ -18,6 +19,10 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/op/go-logging"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
 var log = logging.MustGetLogger("scheduler")
@@ -27,35 +32,109 @@ var (
 	certFile = flag.String("cert_file", "", "The TLS cert file")
 	keyFile  = flag.String("key_file", "", "The TLS key file")
 	port     = flag.Int("port", 50051, "The server port")
+
+	rcvQueue      = flag.String("q", "MoistureSensorUpdateActuator", "The name of the queue")
+	timeout       = flag.Int64("t", 5, "How long, in seconds, that the message is hidden from others")
+	messageHandle = flag.String("m", "", "The receipt handle of the message")
 )
 
 type messageServer struct {
 	pb.UnimplementedMessageServer
+	sess *session.Session
+}
+
+type UpdateActuatorMessage struct {
+	ActuatorId string `json:"actuatorId"`
+	Key        string `json:"key"`
+	Value      string `json:"value"`
 }
 
 // ListFeatures lists all features contained within the given bounding Rectangle.
 func (s *messageServer) MessageChat(clientInit *pb.ClientInit, stream pb.Message_MessageChatServer) error {
 	log.Noticef("New client connected with id: %s", clientInit.GetId())
 
-	// send Message.Data to client every 1 second
-	for {
-		// key :=
+	svc := sqs.New(s.sess)
 
-		data := &pb.Data{
-			DeviceId: "my device id",
-			Key:      clientInit.GetId() + " - mykey",
-			Value:    5,
+	// Get URL of queue
+	rcvUrlResult, err := GetQueueURL(svc, rcvQueue)
+	if err != nil {
+		log.Error("Error getting the queue URL:", err)
+		return err
+	}
+
+	rcvQueueURL := rcvUrlResult.QueueUrl
+
+	// look forever, waiting 1 second between checks
+	skipSleepFirstRound := true
+	for {
+		// TODO: exit if client disconnects
+
+		// skip sleep the first round
+		if skipSleepFirstRound {
+			skipSleepFirstRound = false
+		} else {
+			// sleep
+			time.Sleep(10 * time.Second)
+			// log.Info("Waiting...")
 		}
-		if err := stream.Send(data); err != nil {
-			log.Noticef("Client %s disconnected: %s", clientInit.GetId(), err)
-			return err
+
+		msgResult, err := GetMessages(svc, rcvQueueURL, timeout)
+		if err != nil {
+			log.Error("Error receiving messages:", err)
+			continue
 		}
-		time.Sleep(1 * time.Second)
+
+		if len(msgResult.Messages) == 0 {
+			log.Notice("No messages received")
+			continue
+		}
+
+		log.Notice("Received", len(msgResult.Messages), "new message(s). Sending to client...")
+
+		for _, msg := range msgResult.Messages {
+			// log.Info("Message ID:     " + *msgResult.Messages[0].MessageId)
+			// log.Info("Message Handle: " + *msgResult.Messages[0].ReceiptHandle)
+			log.Info(*msg.Body)
+
+			// save the body into a variable called rawMsg
+			rawMsg := *msg.Body
+			// convert to json
+			message := UpdateActuatorMessage{"", "", ""}
+			err = json.Unmarshal([]byte(rawMsg), &message)
+			if err != nil {
+				log.Errorf("Error unmarshalling msg [%s], err: %v", rawMsg, err)
+				continue
+			}
+
+			// handle the message
+			data := &pb.Data{
+				DeviceId: message.ActuatorId,
+				Key:      message.Key,
+				Value:    message.Value,
+			}
+			if err := stream.Send(data); err != nil {
+				log.Noticef("Client %s disconnected: %s", clientInit.GetId(), err)
+				return err
+			}
+
+			// delete message
+			flag.Set("m", *msg.ReceiptHandle)
+			if messageHandle == nil {
+				log.Error("No message handle. Can't delete message from queue.")
+				continue
+			}
+
+			err = DeleteMessage(svc, rcvQueueURL, messageHandle)
+			if err != nil {
+				log.Error("Error deleting the message:", err)
+				continue
+			}
+		}
 	}
 }
 
-func newServer() *messageServer {
-	s := &messageServer{}
+func newServer(sess *session.Session) *messageServer {
+	s := &messageServer{sess: sess}
 	return s
 }
 
@@ -78,6 +157,17 @@ func main() {
 	env := os.Getenv("ENV")
 	log.Info("ENV:", string(env))
 
+	// setup session for sqs
+	options := session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config:            aws.Config{Region: aws.String("us-west-2")},
+	}
+	if env == "dev" || env == "docker" {
+		options.Profile = "aws-osuapp"
+	}
+	sess := session.Must(session.NewSessionWithOptions(options))
+
+	// setup grpc server
 	serverAddress := fmt.Sprintf(":%d", *port)
 	if env == "dev" {
 		serverAddress = fmt.Sprintf("localhost:%d", *port)
@@ -102,7 +192,7 @@ func main() {
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	}
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterMessageServer(grpcServer, newServer())
+	pb.RegisterMessageServer(grpcServer, newServer(sess))
 
 	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)

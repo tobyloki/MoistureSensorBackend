@@ -23,5 +23,5 @@ message ClientInit {
 message Data {
   string deviceId = 1;
   string key = 2;
-  int32 value = 3;
+  string value = 3;
 }

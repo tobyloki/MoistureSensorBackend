@@ -24,7 +24,7 @@ RUN protoc --go_out=. --go_opt=paths=source_relative \
     message/message.proto
 
 # Build
-RUN go build -o /server ./server/server.go
+RUN go build -o /server ./server/*.go
 
 ## Deploy
 FROM gcr.io/distroless/base-debian10

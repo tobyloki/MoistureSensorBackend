@@ -5,6 +5,11 @@ go 1.20
 require google.golang.org/grpc v1.53.0
 
 require (
+	github.com/aws/aws-sdk-go v1.44.200 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+)
+
+require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/joho/godotenv v1.5.1
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
