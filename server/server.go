@@ -176,7 +176,7 @@ func pollSqs(env string, sess *session.Session) error {
 				skipSleepFirstRound = false
 			} else {
 				// sleep
-				time.Sleep(1 * time.Second)
+				time.Sleep(10 * time.Second)
 				// log.Info("Waiting...")
 			}
 
@@ -210,7 +210,7 @@ func pollSqs(env string, sess *session.Session) error {
 
 				// handle the message
 				input <- message
-				log.Info("Message sent to client.")
+				log.Info("Message sent to clients.")
 
 				// delete message
 				flag.Set("m", *msg.ReceiptHandle)
