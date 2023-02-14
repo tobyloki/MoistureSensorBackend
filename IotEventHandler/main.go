@@ -139,30 +139,34 @@ func handler(ctx context.Context, event map[string]interface{}) error {
 				if err != nil {
 					fmt.Println("Error marshalling message:", err)
 				} else {
+					sendSqsFlag := false
+
 					lastExpiration := actuator.ExpirationTimestamp
 					if lastExpiration != nil {
 						hasExpiredCheck, err := hasExpired(*lastExpiration)
 						if err != nil {
 							fmt.Println("Error checking expiration:", err)
-						}
-
-						if *hasExpiredCheck {
-							// send SQS
-							err = sendSQS(sess, &resetActuatorQueue, messageBytes)
-							if err != nil {
-								fmt.Println(resetActuatorQueue, "- Error sending SQS:", err)
+						} else {
+							if *hasExpiredCheck {
+								sendSqsFlag = true
 							}
 						}
 					} else {
+						sendSqsFlag = true
+					}
+
+					if sendSqsFlag {
 						// send SQS
 						err = sendSQS(sess, &resetActuatorQueue, messageBytes)
 						if err != nil {
 							fmt.Println(resetActuatorQueue, "- Error sending SQS:", err)
 						}
+
+						fmt.Println(actuator.ActuatorId, "- Actuator updated to state on")
+					} else {
+						fmt.Println(actuator.ActuatorId, "- Actuator not updated due to expiration")
 					}
 				}
-
-				fmt.Println(actuator.ActuatorId, "- Actuator updated to state on")
 			}
 		}(actuator)
 	}
