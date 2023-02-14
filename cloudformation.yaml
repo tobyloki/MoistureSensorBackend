@@ -2,10 +2,22 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Lambda
 Parameters:
+  SqsScheduler:
+    Type: String
+    Description: SQS queue for submitting scheduler jobs
+    Default: arn:aws:sqs:us-west-2:978103014270:MoistureSensorScheduler
   SqsResetActuator:
     Type: String
-    Description: SQS queue ARN for ResetActuator
-    Default: arn:aws:sqs:us-west-2:978103014270:MoistureSensorTimerExpired
+    Description: SQS queue for receiving actuator reset requests from scheduler
+    Default: arn:aws:sqs:us-west-2:978103014270:MoistureSensorResetActuator
+  SqsUpdateActuator:
+    Type: String
+    Description: SQS queue for sending actuator update requests to grpc-server
+    Default: arn:aws:sqs:us-west-2:978103014270:MoistureSensorUpdateActuator
+  IotEventsDetector:
+    Type: String
+    Description: IoT Events detector name
+    Default: arn:aws:iotevents:us-west-2:978103014270:detectorModel/MoistureSensorModel
 Resources:
   # IAM
   LambdaExecutionRole:
@@ -32,7 +44,14 @@ Resources:
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
                   - sqs:GetQueueUrl
-                Resource: !Ref SqsResetActuator
+                Resource:
+                  - !Ref SqsScheduler
+                  - !Ref SqsUpdateActuator
+              - Effect: Allow
+                Action:
+                  - iotevents:DescribeDetector
+                Resource:
+                  - !Ref IotEventsDetector
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
