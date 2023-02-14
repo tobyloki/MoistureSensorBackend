@@ -49,12 +49,6 @@ type messageServer struct {
 	sess *session.Session
 }
 
-type UpdateActuatorMessage struct {
-	ActuatorId string `json:"actuatorId"`
-	Key        string `json:"key"`
-	Value      string `json:"value"`
-}
-
 // MessageChat returns a stream of messages to client
 func (s *messageServer) MessageChat(clientInit *pb.ClientInit, stream pb.Message_MessageChatServer) error {
 	log.Noticef("New client connected with id: %s", clientInit.GetId())
