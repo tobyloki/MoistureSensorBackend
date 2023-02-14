@@ -6,6 +6,10 @@ Parameters:
     Type: String
     Description: SQS queue for submitting scheduler jobs
     Default: arn:aws:sqs:us-west-2:978103014270:MoistureSensorScheduler
+  SqsUpdateActuator:
+    Type: String
+    Description: SQS queue for sending actuator update requests to grpc-server
+    Default: arn:aws:sqs:us-west-2:978103014270:MoistureSensorUpdateActuator
   SnsTopic:
     Type: String
     Description: SNS topic for sending notifications
@@ -35,7 +39,10 @@ Resources:
                   - sqs:PublishMessage
                   - sqs:SendMessage
                   - sqs:SendMessageBatch
-                Resource: !Ref SqsScheduler
+                  - sqs:GetQueueUrl
+                Resource:
+                  - !Ref SqsScheduler
+                  - !Ref SqsUpdateActuator
               - Effect: Allow
                 Action:
                   - sns:Publish
