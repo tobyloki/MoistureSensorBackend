@@ -53,19 +53,19 @@ func main() {
 	env := os.Getenv("ENV")
 	log.Info("ENV:", string(env))
 
-	rcvQueue := flag.String("q", "MoistureSensorScheduler", "The name of the queue")
-	sendQueue := flag.String("s", "MoistureSensorUpdateActuator", "The name of the queue")
+	schedulerQueue := flag.String("q", "MoistureSensorScheduler", "The name of the queue")
+	resetActuatorQueue := flag.String("s", "MoistureSensorResetActuator", "The name of the queue")
 	timeout := flag.Int64("t", 5, "How long, in seconds, that the message is hidden from others")
 	messageHandle := flag.String("m", "", "The receipt handle of the message")
 	flag.Parse()
 
-	if *rcvQueue == "" {
-		log.Info("You must supply a queue name for rcvQueue (-q QUEUE)")
+	if *schedulerQueue == "" {
+		log.Info("You must supply a queue name for schedulerQueue (-q QUEUE)")
 		return
 	}
 
-	if *sendQueue == "" {
-		log.Info("You must supply a queue name for sendQueue (-s QUEUE)")
+	if *resetActuatorQueue == "" {
+		log.Info("You must supply a queue name for resetActuatorQueue (-s QUEUE)")
 		return
 	}
 
@@ -93,19 +93,19 @@ func main() {
 	log.Info("Initialized...")
 
 	// Get URL of queue
-	rcvUrlResult, err := GetQueueURL(svc, rcvQueue)
+	rcvUrlResult, err := GetQueueURL(svc, schedulerQueue)
 	if err != nil {
 		log.Error("Error getting the queue URL:", err)
 		return
 	}
-	sendUrlResult, err := GetQueueURL(svc, sendQueue)
+	sendUrlResult, err := GetQueueURL(svc, resetActuatorQueue)
 	if err != nil {
 		log.Error("Error getting the queue URL:", err)
 		return
 	}
 
-	rcvQueueURL := rcvUrlResult.QueueUrl
-	sendQueueURL := sendUrlResult.QueueUrl
+	schedulerQueueURL := rcvUrlResult.QueueUrl
+	resetActuatorQueueURL := sendUrlResult.QueueUrl
 
 	// look forever, waiting 1 second between checks
 	skipSleepFirstRound := true
@@ -119,7 +119,7 @@ func main() {
 			// log.Info("Waiting...")
 		}
 
-		msgResult, err := GetMessages(svc, rcvQueueURL, timeout)
+		msgResult, err := GetMessages(svc, schedulerQueueURL, timeout)
 		if err != nil {
 			log.Error("Error receiving messages:", err)
 			continue
@@ -147,7 +147,7 @@ func main() {
 				continue
 			}
 
-			err = handleMsg(svc, sendQueueURL, message)
+			err = handleMsg(svc, resetActuatorQueueURL, message)
 			if err != nil {
 				log.Error("Error handling message:", err)
 				continue
@@ -160,7 +160,7 @@ func main() {
 				continue
 			}
 
-			err = DeleteMessage(svc, rcvQueueURL, messageHandle)
+			err = DeleteMessage(svc, schedulerQueueURL, messageHandle)
 			if err != nil {
 				log.Error("Error deleting the message:", err)
 				continue
@@ -228,7 +228,7 @@ func timerCb(sensorThingName string, actuatorId string, svc *sqs.SQS, queueURL *
 		log.Error(actuatorId, " - Error marshalling message:", err)
 	}
 	strMsg := string(messageBytes)
-	// send message to sendQueue
+	// send message to resetActuatorQueue
 	sendErr := SendMsg(svc, queueURL, strMsg)
 	if sendErr != nil {
 		log.Error(actuatorId, " - Error sending message:", sendErr)
