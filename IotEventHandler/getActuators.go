@@ -93,9 +93,13 @@ func updateActuatorExpirationTimestamp(actuator Actuator) error {
 		return fmt.Errorf("invalid granularity unit: %s", actuator.GranularityUnit)
 	}
 
+	// format like 2006-01-02 15:04:05.999999 -0700 MST
+	newExpirationTimestamp = newExpirationTimestamp.UTC()
+	newExpirationTimestampStr := newExpirationTimestamp.Format("2006-01-02 15:04:05.999999 -0700 MST")
+
 	// set new expiration timestamp to current datetime + granularity value
-	query := fmt.Sprintf(`mutation MyMutation { updateActuator(input: {id: \"%s\", _version: 10, currentExpirationTimestamp: \"%s\"}) { id } }`, actuator.ActuatorId, newExpirationTimestamp)
-	fmt.Println("query:", query)
+	query := fmt.Sprintf(`mutation MyMutation { updateActuator(input: {id: \"%s\", _version: %d, currentExpirationTimestamp: \"%s\"}) { id } }`, actuator.ActuatorId, actuator.Version, newExpirationTimestampStr)
+	// fmt.Println("query:", query)
 	ret, err := httpRequest(query)
 	if err != nil {
 		return err
