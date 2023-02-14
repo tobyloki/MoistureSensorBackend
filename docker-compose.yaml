@@ -6,4 +6,4 @@ services:
     volumes:
       - ~/.aws/:/root/.aws:ro
     environment:
-      - ENV=dev
+      - ENV=docker

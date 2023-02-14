@@ -17,32 +17,6 @@ import (
 
 var log = logging.MustGetLogger("scheduler")
 
-const MINUTE = "MINUTES"
-const HOUR = "HOURS"
-const DAY = "DAYS"
-
-// create enum for granularityUnit of minute, hour, day from json
-type GranularityUnit string
-
-const (
-	Minute GranularityUnit = MINUTE
-	Hour   GranularityUnit = HOUR
-	Day    GranularityUnit = DAY
-)
-
-type SchedulerMessage struct {
-	// name of the key must be capitalized to be exported
-	ActuatorId       string          `json:"actuatorId"`
-	GranularityValue int             `json:"granularityValue"`
-	GranularityUnit  GranularityUnit `json:"granularityUnit"`
-}
-
-type UpdateActuatorMessage struct {
-	ActuatorId string `json:"actuatorId"`
-	Key        string `json:"key"`
-	Value      string `json:"value"`
-}
-
 func main() {
 	format := logging.MustStringFormatter(
 		`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
@@ -108,7 +82,7 @@ func main() {
 		SharedConfigState: session.SharedConfigEnable,
 		Config:            aws.Config{Region: aws.String("us-west-2")},
 	}
-	if env == "dev" {
+	if env == "dev" || env == "docker" {
 		options.Profile = "aws-osuapp"
 	}
 	sess := session.Must(session.NewSessionWithOptions(options))
@@ -166,7 +140,7 @@ func main() {
 			// save the body into a variable called rawMsg
 			rawMsg := *msg.Body
 			// convert to json
-			message := SchedulerMessage{"", -1, ""}
+			message := SchedulerMessage{"", "", -1, ""}
 			err = json.Unmarshal([]byte(rawMsg), &message)
 			if err != nil {
 				log.Error("Error unmarshalling rawMsg:", err)
@@ -240,14 +214,15 @@ func handleMsg(svc *sqs.SQS, queueURL *string, message SchedulerMessage) error {
 	// start a timer with the actuatorId as the name. If a message with the same actuatorId is received, stop the timer
 	// create variable of type Duration from endTime - startTime
 	duration := endTime.Sub(startTime)
-	StartTimer(duration, timerCb, actuatorId, svc, queueURL)
+	sensorThingName := message.SensorThingName
+	StartTimer(duration, timerCb, sensorThingName, actuatorId, svc, queueURL)
 
 	return nil
 }
 
-func timerCb(actuatorId string, svc *sqs.SQS, queueURL *string) {
-	log.Info(actuatorId, "- Timer expired. Sending message to sendQueue.")
-	message := UpdateActuatorMessage{actuatorId, "state", "on"}
+func timerCb(sensorThingName string, actuatorId string, svc *sqs.SQS, queueURL *string) {
+	log.Info(actuatorId, "- Timer expired. Sending message to:", queueURL)
+	message := ResetActuatorMessage{sensorThingName, actuatorId}
 	messageBytes, err := json.Marshal(message)
 	if err != nil {
 		log.Error(actuatorId, " - Error marshalling message:", err)

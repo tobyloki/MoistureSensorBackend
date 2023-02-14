@@ -12,7 +12,7 @@ var (
 	mu     sync.Mutex
 )
 
-func StartTimer(duration time.Duration, callback func(actuatorId string, svc *sqs.SQS, queueURL *string), actuatorId string, svc *sqs.SQS, queueURL *string) {
+func StartTimer(duration time.Duration, callback func(sensorThingName string, actuatorId string, svc *sqs.SQS, queueURL *string), sensorThingName string, actuatorId string, svc *sqs.SQS, queueURL *string) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -27,7 +27,7 @@ func StartTimer(duration time.Duration, callback func(actuatorId string, svc *sq
 		mu.Lock()
 		defer mu.Unlock()
 		delete(timers, actuatorId)
-		callback(actuatorId, svc, queueURL)
+		callback(sensorThingName, actuatorId, svc, queueURL)
 	})
 
 	log.Info(actuatorId, "- Started timer for", duration)
