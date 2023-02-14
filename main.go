@@ -30,14 +30,14 @@ const (
 	Day    GranularityUnit = DAY
 )
 
-type RcvMessage struct {
+type SchedulerMessage struct {
 	// name of the key must be capitalized to be exported
 	ActuatorId       string          `json:"actuatorId"`
 	GranularityValue int             `json:"granularityValue"`
 	GranularityUnit  GranularityUnit `json:"granularityUnit"`
 }
 
-type SendMessage struct {
+type UpdateActuatorMessage struct {
 	ActuatorId string `json:"actuatorId"`
 	Key        string `json:"key"`
 	Value      string `json:"value"`
@@ -59,7 +59,7 @@ func main() {
 
 	// for {
 	// test := `{"actuatorId": "asdf", "granularityValue":5, "granularityUnit":"MINUTE"}`
-	// message := RcvMessage{"", -1, ""}
+	// message := SchedulerMessage{"", -1, ""}
 	// err := json.Unmarshal([]byte(test), &message)
 	// if err != nil {
 	// 	log.Info("Error unmarshalling the message:", err)
@@ -166,7 +166,7 @@ func main() {
 			// save the body into a variable called rawMsg
 			rawMsg := *msg.Body
 			// convert to json
-			message := RcvMessage{"", -1, ""}
+			message := SchedulerMessage{"", -1, ""}
 			err = json.Unmarshal([]byte(rawMsg), &message)
 			if err != nil {
 				log.Error("Error unmarshalling rawMsg:", err)
@@ -199,7 +199,7 @@ func main() {
 	log.Critical("Program ended")
 }
 
-func handleMsg(svc *sqs.SQS, queueURL *string, message RcvMessage) error {
+func handleMsg(svc *sqs.SQS, queueURL *string, message SchedulerMessage) error {
 	actuatorId := message.ActuatorId
 	granularityValue := message.GranularityValue
 	granularityUnit := message.GranularityUnit
@@ -247,7 +247,7 @@ func handleMsg(svc *sqs.SQS, queueURL *string, message RcvMessage) error {
 
 func timerCb(actuatorId string, svc *sqs.SQS, queueURL *string) {
 	log.Info(actuatorId, "- Timer expired. Sending message to sendQueue.")
-	message := SendMessage{actuatorId, "state", "off"}
+	message := UpdateActuatorMessage{actuatorId, "state", "on"}
 	messageBytes, err := json.Marshal(message)
 	if err != nil {
 		log.Error(actuatorId, " - Error marshalling message:", err)
