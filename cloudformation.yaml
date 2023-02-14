@@ -34,7 +34,7 @@ Resources:
             Action:
               - sts:AssumeRole
       Policies:
-        - PolicyName: !Sub ${AWS::StackName}-SQSPolicy
+        - PolicyName: !Sub ${AWS::StackName}-Policy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -52,6 +52,14 @@ Resources:
                   - iotevents:DescribeDetector
                 Resource:
                   - !Ref IotEventsDetector
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:GetQueueUrl
+                Resource:
+                  - !Ref SqsResetActuator
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 

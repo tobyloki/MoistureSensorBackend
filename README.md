@@ -18,3 +18,7 @@ Deploy cloudformation template to AWS from within root directory.
 ```cmd
 sam deploy --config-file samconfig.toml --capabilities CAPABILITY_NAMED_IAM --no-confirm-changeset
 ```
+
+# Notes
+
+- SQS visibility timeout must be >= 10 seconds per Lambda requirements
