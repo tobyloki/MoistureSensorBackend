@@ -10,14 +10,17 @@ protoc --go_out=. --go_opt=paths=source_relative \
  message/message.proto
 ```
 
-- Run server and client
+- Run server
 
 ```bash
 go run server/*.go
 ```
 
+- Run client (must be run from client directory b/c it references a bash script inside of its relative directory)
+
 ```bash
-go run client/*.go
+cd client
+go run .
 ```
 
 # Docker

@@ -5,7 +5,7 @@ import (
 	"flag"
 	"io"
 	"os"
-	"time"
+	"os/exec"
 
 	pb "grpc/message"
 
@@ -28,22 +28,94 @@ var (
 
 func startChat(client pb.MessageClient, clientInit *pb.ClientInit) {
 	log.Noticef("Sending initial client data to server %v", clientInit)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stream, err := client.MessageChat(ctx, clientInit)
 	if err != nil {
 		log.Errorf("client.MessageChat failed: %v", err)
 	}
+	log.Noticef("Connected to server")
 	for {
 		data, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Fatalf("client.MessageChat failed: %v", err)
+			break
 		}
+
 		log.Infof("DeviceId: %q, Key: %q, Value: %v", data.GetDeviceId(), data.GetKey(), data.GetValue())
+
+		if data.GetKey() == "state" {
+			onOff := data.GetValue() == "on"
+			sendToChipTool(data.GetDeviceId(), onOff)
+		}
 	}
+}
+
+// TODO: check if it's possible to actually run multiple instances of chip-tool at the same time
+func sendToChipTool(deviceId string, onOff bool) {
+	// run in a goroutine so we don't block the main thread
+	go func() {
+		// log.Infof("Sending to chip tool: %v with state %b", deviceId, onOff)
+
+		// run the bash command test.sh
+		// Define the path to the bash script
+		scriptPath := "./test.sh"
+
+		// convert onOff to a string of either "1" or "0"
+		val := "0"
+		if onOff {
+			val = "1"
+		}
+
+		// Create the command to run the script, passing in the args deviceId and onOff
+		// NOTE: command line args only accept strings
+		cmd := exec.Command(scriptPath, deviceId, val)
+
+		// Run the command and capture its output in real time
+		// output, err := cmd.CombinedOutput()
+		// if err != nil {
+		// 	log.Errorf("Failed to run script: %s\n", err)
+		// } else {
+		// 	log.Infof("Script output: %s\n", output)
+		// }
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Info("Error creating StdoutPipe: ", err)
+			return
+		}
+
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			log.Info("Error creating StderrPipe: ", err)
+			return
+		}
+
+		if err := cmd.Start(); err != nil {
+			log.Info("Error starting command: ", err)
+			return
+		}
+
+		go func() {
+			// Print stdout in real-time
+			io.Copy(os.Stdout, stdout)
+		}()
+
+		go func() {
+			// Print stderr in real-time
+			io.Copy(os.Stderr, stderr)
+		}()
+
+		if err := cmd.Wait(); err != nil {
+			log.Info("Command finished with error: ", err)
+			return
+		}
+
+		// log.Info("Command finished successfully")
+	}()
 }
 
 func main() {
