@@ -52,5 +52,5 @@ Extra stuff
 ```bash
 docker rm -f schedulerContainer
 
-docker logs --follow schedulerContainer
+docker logs --follow --since $(date +%Y-%m-%dT%H:%M:%SZ) schedulerContainer
 ```
