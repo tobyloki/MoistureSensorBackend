@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
+	"time"
 
 	pb "grpc/message"
 
@@ -20,9 +23,10 @@ import (
 var log = logging.MustGetLogger("scheduler")
 
 var (
-	tls                = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
-	caFile             = flag.String("ca_file", "", "The file containing the CA root cert file")
-	serverAddr         = flag.String("addr", "35.164.231.144:50051", "The server address in the format of host:port")
+	tls        = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
+	caFile     = flag.String("ca_file", "", "The file containing the CA root cert file")
+	serverAddr = flag.String("addr", "35.164.231.144:50051", "The server address in the format of host:port")
+	// serverAddr         = flag.String("addr", "localhost:50051", "The server address in the format of host:port")
 	serverHostOverride = flag.String("server_host_override", "x.test.example.com", "The server name used to verify the hostname returned by the TLS handshake")
 )
 
@@ -55,67 +59,90 @@ func startChat(client pb.MessageClient, clientInit *pb.ClientInit) {
 }
 
 // TODO: check if it's possible to actually run multiple instances of chip-tool at the same time
-func sendToChipTool(deviceId string, onOff bool) {
+func sendToChipTool(deviceId string, onOff bool) error {
 	// run in a goroutine so we don't block the main thread
+	// go func() error {
+
+	// run the bash command
+	// Define the path to the bash script
+	scriptPath := "./script.sh"
+
+	// convert onOff to a string of either "1" or "0"
+	state := "0"
+	if onOff {
+		state = "1"
+	}
+
+	log.Infof("Sending to chip tool: %v with state %s", deviceId, state)
+
+	/**********************/
+
+	expiration := 8
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(expiration)*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, scriptPath, deviceId, state)
+
+	// Start the command
+	// if err := cmd.Start(); err != nil {
+	// 	log.Errorf("Failed to start command: %s\n", err)
+	// 	return nil, err
+	// }
+
+	// Wait for the command to complete or the context to expire
+	done := make(chan error, 1)
+	output := make([]byte, 0)
 	go func() {
-		// log.Infof("Sending to chip tool: %v with state %b", deviceId, onOff)
-
-		// run the bash command test.sh
-		// Define the path to the bash script
-		scriptPath := "./test.sh"
-
-		// convert onOff to a string of either "1" or "0"
-		val := "0"
-		if onOff {
-			val = "1"
-		}
-
-		// Create the command to run the script, passing in the args deviceId and onOff
-		// NOTE: command line args only accept strings
-		cmd := exec.Command(scriptPath, deviceId, val)
-
-		// Run the command and capture its output in real time
-		// output, err := cmd.CombinedOutput()
-		// if err != nil {
-		// 	log.Errorf("Failed to run script: %s\n", err)
-		// } else {
-		// 	log.Infof("Script output: %s\n", output)
-		// }
-
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			log.Info("Error creating StdoutPipe: ", err)
-			return
-		}
-
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			log.Info("Error creating StderrPipe: ", err)
-			return
-		}
-
-		if err := cmd.Start(); err != nil {
-			log.Info("Error starting command: ", err)
-			return
-		}
-
-		go func() {
-			// Print stdout in real-time
-			io.Copy(os.Stdout, stdout)
-		}()
-
-		go func() {
-			// Print stderr in real-time
-			io.Copy(os.Stderr, stderr)
-		}()
-
-		if err := cmd.Wait(); err != nil {
-			log.Info("Command finished with error: ", err)
-			return
-		}
-
-		// log.Info("Command finished successfully")
+		var err error
+		output, err = cmd.CombinedOutput()
+		done <- err
+		close(done)
 	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			// delete temp-$deviceId.txt
+			err = os.Remove("temp-" + deviceId + ".txt")
+			if err != nil {
+				// log.Error(err)
+			}
+
+			if ctx.Err() == context.DeadlineExceeded {
+				// If the context has expired, try to kill the process
+				if err := cmd.Process.Kill(); err != nil {
+					log.Errorf("Failed to kill process: %s\n", err)
+				}
+				return fmt.Errorf("Command timed out after %d seconds", expiration)
+			}
+			log.Errorf("Command failed: %s\n", err)
+			return err
+		}
+		// Process the output
+		// split the output in array by new line
+		outputArray := strings.Split(string(output), "\n")
+		for _, line := range outputArray {
+			log.Info(line)
+		}
+
+		return nil
+	case <-ctx.Done():
+		// delete temp-$deviceId.txt
+		err := os.Remove("temp-" + deviceId + ".txt")
+		if err != nil {
+			// log.Error(err)
+		}
+
+		// If the context has expired, try to kill the process
+		if err = cmd.Process.Kill(); err != nil {
+			log.Errorf("Failed to kill process: %s\n", err)
+		}
+		return fmt.Errorf("Command timed out after %d seconds", expiration)
+	}
+
+	/**********************/
+	// }()
 }
 
 func main() {
@@ -149,6 +176,14 @@ func main() {
 	defer conn.Close()
 	client := pb.NewMessageClient(conn)
 
-	// Feature missing.
 	startChat(client, &pb.ClientInit{Id: "myclientid"})
+
+	// run a loop every 5 seconds
+	// for {
+	// 	sendToChipTool("13", true)
+	// 	time.Sleep(20 * time.Second)
+
+	// 	sendToChipTool("13", false)
+	// 	time.Sleep(20 * time.Second)
+	// }
 }
