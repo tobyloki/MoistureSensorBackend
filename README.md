@@ -79,5 +79,5 @@ Extra stuff
 ```bash
 docker rm -f grpc-serverContainer
 
-docker logs --follow grpc-serverContainer
+docker logs --follow --since $(date +%Y-%m-%dT%H:%M:%SZ) grpc-serverContainer
 ```
