@@ -180,7 +180,7 @@ func getNodeIds() ([]string, error) {
 	// return []string{"13"}, nil
 
 	// read nodeIds.csv (each line is a nodeId)
-	file, err := os.Open("nodeIds.csv")
+	file, err := os.Open("./nodeIds.csv")
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,17 @@ func getNodeIds() ([]string, error) {
 	scanner.Split(bufio.ScanLines)
 	var nodeIds []string
 	for scanner.Scan() {
-		nodeIds = append(nodeIds, scanner.Text())
+		// split text by comma
+		textArray := strings.Split(scanner.Text(), ",")
+		// nodeId is the first element
+		nodeId := textArray[0]
+		// device type is the second element
+		deviceType := textArray[1]
+
+		// if device type is "sensor"
+		if deviceType == "sensor" {
+			nodeIds = append(nodeIds, nodeId)
+		}
 	}
 
 	return nodeIds, nil
