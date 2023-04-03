@@ -24,6 +24,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - iot:UpdateThingShadow
+                  - timestream:CancelQuery
+                  - timestream:Select
+                  - timestream:PrepareQuery
+                  - timestream:SelectValues
+                  - timestream:DescribeTable
+                  - timestream:ListMeasures
+                  - timestream:DescribeEndpoints
                 Resource: '*'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
