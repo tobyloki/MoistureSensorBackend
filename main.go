@@ -133,28 +133,44 @@ func getData(deviceId string) (*DataReport, error) {
 
 			if strings.Contains(line, "temperature: ") {
 				tempStr := strings.Split(line, ": ")[1]
-				// convert temperature to int
+				// convert to int
 				temp, err := strconv.Atoi(tempStr)
 				if err != nil {
 					return nil, err
 				}
 				data.Temperature = temp
+			} else if strings.Contains(line, "humidity: ") {
+				humidityStr := strings.Split(line, ": ")[1]
+				// convert to int
+				humidity, err := strconv.Atoi(humidityStr)
+				if err != nil {
+					return nil, err
+				}
+				data.Humidity = humidity
 			} else if strings.Contains(line, "pressure: ") {
 				pressureStr := strings.Split(line, ": ")[1]
-				// convert pressure to int
+				// convert to int
 				pressure, err := strconv.Atoi(pressureStr)
 				if err != nil {
 					return nil, err
 				}
 				data.Pressure = pressure
-			} else if strings.Contains(line, "moisture: ") {
-				moistureStr := strings.Split(line, ": ")[1]
-				// convert moisture to int
-				moisture, err := strconv.Atoi(moistureStr)
+			} else if strings.Contains(line, "soilMoisture: ") {
+				soilMoistureStr := strings.Split(line, ": ")[1]
+				// convert to int
+				soilMoisture, err := strconv.Atoi(soilMoistureStr)
 				if err != nil {
 					return nil, err
 				}
-				data.Moisture = moisture
+				data.SoilMoisture = soilMoisture
+			} else if strings.Contains(line, "light: ") {
+				lightStr := strings.Split(line, ": ")[1]
+				// convert to int
+				light, err := strconv.Atoi(lightStr)
+				if err != nil {
+					return nil, err
+				}
+				data.Light = light
 			}
 		}
 

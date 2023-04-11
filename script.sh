@@ -30,19 +30,33 @@ fi
 temperature=$(cat $filename | grep "MeasuredValue: " | awk '{print $NF}')
 echo "$deviceId - temperature: $temperature"
 
+# get humidity
+~/matter/MoistureSensorFirmware/esp-matter/connectedhomeip/connectedhomeip/out/host/chip-tool relativehumiditymeasurement read measured-value $deviceId 2 --commissioner-name 5 > $filename
+
+# read $filename and get the line that contains "measured value: " and save the value after the last space
+humidity=$(cat $filename | grep "measured value: " | awk '{print $NF}')
+echo "$deviceId - humidity: $humidity"
+
 # get pressure
-~/matter/MoistureSensorFirmware/esp-matter/connectedhomeip/connectedhomeip/out/host/chip-tool pressuremeasurement read measured-value $deviceId 2 --commissioner-name 5 > $filename
+~/matter/MoistureSensorFirmware/esp-matter/connectedhomeip/connectedhomeip/out/host/chip-tool pressuremeasurement read measured-value $deviceId 3 --commissioner-name 5 > $filename
 
 # read $filename and get the line that contains "MeasuredValue: " and save the value after the last space
 pressure=$(cat $filename | grep "MeasuredValue: " | awk '{print $NF}')
 echo "$deviceId - pressure: $pressure"
 
-# get moisture
-~/matter/MoistureSensorFirmware/esp-matter/connectedhomeip/connectedhomeip/out/host/chip-tool relativehumiditymeasurement read measured-value $deviceId 3 --commissioner-name 5 > $filename
+# get soil moisture
+~/matter/MoistureSensorFirmware/esp-matter/connectedhomeip/connectedhomeip/out/host/chip-tool flowmeasurement read measured-value $deviceId 4 --commissioner-name 5 > $filename
 
 # read $filename and get the line that contains "measured value: " and save the value after the last space
-moisture=$(cat $filename | grep "measured value: " | awk '{print $NF}')
-echo "$deviceId - moisture: $moisture"
+soilMoisture=$(cat $filename | grep "MeasuredValue: " | awk '{print $NF}')
+echo "$deviceId - soilMoisture: $soilMoisture"
+
+# get light
+~/matter/MoistureSensorFirmware/esp-matter/connectedhomeip/connectedhomeip/out/host/chip-tool flowmeasurement read measured-value $deviceId 5 --commissioner-name 5 > $filename
+
+# read $filename and get the line that contains "measured value: " and save the value after the last space
+light=$(cat $filename | grep "MeasuredValue: " | awk '{print $NF}')
+echo "$deviceId - light: $light"
 
 # delete $filename
 rm $filename
