@@ -108,13 +108,15 @@ public static class Program
                 }
             });
 
-        app.MapGet("/report-data/{deviceId}", async (HttpContext httpContext, string deviceId, int temperature, int pressure, int moisture) =>
+        app.MapGet("/report-data/{deviceId}", async (HttpContext httpContext, string deviceId, int temperature, int humidity, int pressure, int soilMoisture, int light) =>
             {
                 var sensorData = new SensorDataInput
                 {
                     Temperature = temperature,
+                    Humidity = humidity,
                     Pressure = pressure,
-                    Moisture = moisture
+                    SoilMoisture = soilMoisture,
+                    Light = light
                 };
                 
                 try
@@ -149,8 +151,10 @@ public static class Program
                             reported = new
                             {
                                 temperature = sensorData.Temperature,
+                                humidity = sensorData.Humidity,
                                 pressure = sensorData.Pressure,
-                                moisture = sensorData.Moisture
+                                soilMoisture = sensorData.Humidity,
+                                light = sensorData.Light
                             }
                         }
                     })));
@@ -229,13 +233,13 @@ public static class Program
                     FROM (
                         SELECT *
                         FROM ""MoistureSensorTimestreamDB"".""MoistureSensorTable""
-                        WHERE deviceId='0506' AND measure_name IN ('moisture', 'pressure', 'temperature')
+                        WHERE deviceId='" + thingName + @"' AND measure_name IN ('temperature', 'humidity', 'pressure', 'soilMoisture', 'light')
                         ORDER BY measure_name, time DESC
                     ) t
                         WHERE time IN (
                         SELECT MAX(time)
                         FROM ""MoistureSensorTimestreamDB"".""MoistureSensorTable""
-                        WHERE deviceId='" + thingName + @"' AND measure_name IN ('moisture', 'pressure', 'temperature')
+                        WHERE deviceId='" + thingName + @"' AND measure_name IN ('temperature', 'humidity', 'pressure', 'soilMoisture', 'light')
                         GROUP BY measure_name
                     )
             ";
@@ -259,7 +263,7 @@ public static class Program
                         Logger.LogInformation("Measure name: {MeasureName}", measureName);
                         
                         // check if measureName is either temperature, pressure, or moisture
-                        if (measureName is "temperature" or "pressure" or "moisture")
+                        if (measureName is "temperature" or "humidity" or "pressure" or "soilMoisture" or "light")
                         {
                             foreach (var sAgain in split)
                             {
@@ -273,13 +277,21 @@ public static class Program
                                     {
                                         sensorData.TemperatureTime = DateTime.Parse(measureTime);
                                     }
+                                    else if (measureName is "humidity")
+                                    {
+                                        sensorData.HumidityTime = DateTime.Parse(measureTime);
+                                    }
                                     else if (measureName is "pressure")
                                     {
                                         sensorData.PressureTime = DateTime.Parse(measureTime);
                                     }
-                                    else if (measureName is "moisture")
+                                    else if (measureName is "soilMoisture")
                                     {
-                                        sensorData.MoistureTime = DateTime.Parse(measureTime);
+                                        sensorData.SoilMoistureTime = DateTime.Parse(measureTime);
+                                    }
+                                    else if (measureName is "light")
+                                    {
+                                        sensorData.LightTime = DateTime.Parse(measureTime);
                                     }
                                 }
                                 
@@ -293,13 +305,21 @@ public static class Program
                                     {
                                         sensorData.Temperature = int.Parse(measureValue);
                                     }
+                                    else if (measureName is "humidity")
+                                    {
+                                        sensorData.Humidity = int.Parse(measureValue);
+                                    }
                                     else if (measureName is "pressure")
                                     {
                                         sensorData.Pressure = int.Parse(measureValue);
                                     }
-                                    else if (measureName is "moisture")
+                                    else if (measureName is "soilMoisture")
                                     {
-                                        sensorData.Moisture = int.Parse(measureValue);
+                                        sensorData.SoilMoisture = int.Parse(measureValue);
+                                    }
+                                    else if (measureName is "light")
+                                    {
+                                        sensorData.Light = int.Parse(measureValue);
                                     }
                                 }
                             }
