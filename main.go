@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"strconv"
@@ -136,41 +137,46 @@ func getData(deviceId string) (*DataReport, error) {
 				// convert to int
 				temp, err := strconv.Atoi(tempStr)
 				if err != nil {
-					return nil, err
+					// return nil, err
+				} else {
+					data.Temperature = temp / 100
 				}
-				data.Temperature = temp
 			} else if strings.Contains(line, "humidity: ") {
 				humidityStr := strings.Split(line, ": ")[1]
 				// convert to int
 				humidity, err := strconv.Atoi(humidityStr)
 				if err != nil {
-					return nil, err
+					// return nil, err
+				} else {
+					data.Humidity = humidity / 100
 				}
-				data.Humidity = humidity
 			} else if strings.Contains(line, "pressure: ") {
 				pressureStr := strings.Split(line, ": ")[1]
 				// convert to int
 				pressure, err := strconv.Atoi(pressureStr)
 				if err != nil {
-					return nil, err
+					// return nil, err
+				} else {
+					data.Pressure = pressure / 10
 				}
-				data.Pressure = pressure
 			} else if strings.Contains(line, "soilMoisture: ") {
 				soilMoistureStr := strings.Split(line, ": ")[1]
 				// convert to int
 				soilMoisture, err := strconv.Atoi(soilMoistureStr)
 				if err != nil {
-					return nil, err
+					// return nil, err
+				} else {
+					data.SoilMoisture = soilMoisture / 10
 				}
-				data.SoilMoisture = soilMoisture
 			} else if strings.Contains(line, "light: ") {
 				lightStr := strings.Split(line, ": ")[1]
 				// convert to int
 				light, err := strconv.Atoi(lightStr)
 				if err != nil {
-					return nil, err
+					// return nil, err
+				} else {
+					data.Light = int(math.Exp(float64(light - 1) / 10000))
 				}
-				data.Light = light
 			}
 		}
 
