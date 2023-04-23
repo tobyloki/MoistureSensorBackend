@@ -16,7 +16,7 @@ type Sensor struct {
 }
 
 func getSensor(thingName string) (*Sensor, error) {
-	query := "query MyQuery { listSensors { items { id name thingName } } }"
+	query := "query MyQuery { listSensors { items { id name thingName _deleted } } }"
 	ret, err := httpRequest(query)
 	if err != nil {
 		return nil, err
@@ -35,6 +35,11 @@ func getSensor(thingName string) (*Sensor, error) {
 	for _, item := range items {
 		if item.(map[string]interface{})["thingName"] == thingName {
 			itemValue := item.(map[string]interface{})
+
+			// check if deleted is not null and true
+			if itemValue["_deleted"] != nil && itemValue["_deleted"].(bool) {
+				continue
+			}
 
 			id := itemValue["id"].(string)
 			name := itemValue["name"].(string)
@@ -120,7 +125,7 @@ type Actuator struct {
 
 func getActuatorList(integrationId string) ([]Actuator, error) {
 	// get actuator list
-	query := fmt.Sprintf(`query MyQuery { getIntegration(id: \"%s\") { Actuators { items { id expirationValue expirationGranularity currentExpirationTimestamp _version } } } }`, integrationId)
+	query := fmt.Sprintf(`query MyQuery { getIntegration(id: \"%s\") { Actuators { items { id expirationValue expirationGranularity currentExpirationTimestamp _version _deleted } } } }`, integrationId)
 	ret, err := httpRequest(query)
 	if err != nil {
 		return nil, err
@@ -144,6 +149,11 @@ func getActuatorList(integrationId string) ([]Actuator, error) {
 	actuatorList := make([]Actuator, len(items))
 	for i, item := range items {
 		itemJson := item.(map[string]interface{})
+
+		// check if deleted is not null and true
+		if itemJson["_deleted"] != nil && itemJson["_deleted"].(bool) {
+			continue
+		}
 
 		// fmt.Println("item:", itemJson["id"])
 		actuatorId := itemJson["id"].(string)
