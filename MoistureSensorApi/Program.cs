@@ -153,7 +153,7 @@ public static class Program
                                 temperature = sensorData.Temperature,
                                 humidity = sensorData.Humidity,
                                 pressure = sensorData.Pressure,
-                                soilMoisture = sensorData.Humidity,
+                                soilMoisture = sensorData.SoilMoisture,
                                 light = sensorData.Light
                             }
                         }

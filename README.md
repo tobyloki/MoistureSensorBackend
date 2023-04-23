@@ -11,7 +11,7 @@ https://<host>/swagger
 To send data (from hub)
 
 ```
-GET https://<host>/report-data/<deviceId>?temperature=<temperature>&pressure=<pressure>&moisture=<moisture>
+GET https://<host>/report-data/<deviceId>?temperature=<temperature>&humidity=<humidity>&soilMoisture=<soilMoisture>&pressure=<pressure>&light=<light>
 ```
 
 To read data (from app)
