@@ -40,13 +40,46 @@ func startChat(client pb.MessageClient, clientInit *pb.ClientInit) {
 		log.Errorf("client.MessageChat failed: %v", err)
 	}
 	log.Noticef("Connected to server")
+
+	counter := 0
+
+	var lastData *pb.Data
+
 	for {
 		data, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
+			log.Errorf("Failed to receive a message from server: %v", err)
+
+			// check if code is Unavailable
+			if strings.Contains(err.Error(), "Unavailable") {
+				counter++
+			}
+
+			if lastData != nil {
+				data = lastData
+
+				// if data.Value was on, set it to off
+				// assuming that the message was intended to invert the value
+				if data.GetValue() == "on" {
+					data.Value = "off"
+				} else {
+					data.Value = "on"
+				}
+			}
+		} else {
+			counter = 0
+		}
+
+		if counter == 2 {
+			log.Errorf("Server is unavailable. Exiting...")
 			break
+		}
+
+		if data == nil {
+			continue
 		}
 
 		log.Infof("DeviceId: %q, Key: %q, Value: %v", data.GetDeviceId(), data.GetKey(), data.GetValue())
@@ -55,6 +88,9 @@ func startChat(client pb.MessageClient, clientInit *pb.ClientInit) {
 			onOff := data.GetValue() == "on"
 			sendToChipTool(data.GetDeviceId(), onOff)
 		}
+
+		// if error, assume the messages was intended to flip value
+		lastData = data
 	}
 }
 
