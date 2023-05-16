@@ -97,6 +97,22 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			}
 
 			fmt.Println(actuator.ActuatorId, "- Device is not in Normal state. Reset timer and updated expiration for actuator.")
+
+			// send request to turn off actuator again
+			// send SQS to update actuator to off
+			message := UpdateActuatorMessage{resetActuatorMsg.ActuatorId, "state", "off"}
+			messageBytes, err := json.Marshal(message)
+			if err != nil {
+				fmt.Println("Error marshalling message:", err)
+				return err
+			}
+			err = sendSQS(sess, &updateActuatorQueue, messageBytes)
+			if err != nil {
+				fmt.Println("Error sending SQS:", err)
+				return err
+			}
+
+			fmt.Println(actuator.ActuatorId, "- Actuator updated to state off")
 		}
 	}
 
