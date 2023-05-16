@@ -82,7 +82,7 @@ func getData(deviceId string) (*DataReport, error) {
 
 	/**********************/
 
-	expiration := 15
+	expiration := 8
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(expiration)*time.Second)
 	defer cancel()
@@ -164,7 +164,7 @@ func getData(deviceId string) (*DataReport, error) {
 				// convert to int
 				soilMoisture, err := strconv.Atoi(soilMoistureStr)
 				if err != nil {
-					// return nil, err
+					return nil, err
 				} else {
 					data.SoilMoisture = soilMoisture / 10
 				}
@@ -175,7 +175,7 @@ func getData(deviceId string) (*DataReport, error) {
 				if err != nil {
 					// return nil, err
 				} else {
-					data.Light = int(math.Exp(float64(light - 1) / 10000))
+					data.Light = int(math.Exp(float64(light-1) / 10000))
 				}
 			}
 		}
