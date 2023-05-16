@@ -56,6 +56,8 @@ func (s *messageServer) MessageChat(clientInit *pb.ClientInit, stream pb.Message
 	output := make(chan UpdateActuatorMessage, 100)
 	mux.Subscribe(output)
 
+	counter := 0
+
 	for message := range output {
 		// handle the message
 		data := &pb.Data{
@@ -63,20 +65,32 @@ func (s *messageServer) MessageChat(clientInit *pb.ClientInit, stream pb.Message
 			Key:      message.Key,
 			Value:    message.Value,
 		}
-		if err := stream.Send(data); err != nil {
-			// delay 1 second
-			time.Sleep(1 * time.Second)
 
-			// try again
-			if err2 := stream.Send(data); err2 != nil {
-				log.Noticef("Client [%s] disconnected: %s", clientInit.GetId(), err2)
+		retries := 5
+		for i := 0; i < retries; i++ {
+			if err := stream.Send(data); err != nil {
+				log.Errorf("Client [%s] error: %s. Trying again in 3s. Attempted [%d/%d].", clientInit.GetId(), err, i+1, retries)
+				// delay 1 second
+				time.Sleep(3 * time.Second)
 
-				mux.Unsubscribe(output)
-				return err2
+				// try again
+				if i == 4 {
+					counter++
+				}
+
+				if counter == 2 {
+					log.Errorf("Disconnecting client [%s] b/c of 2 consecutive errors with retries. Exiting with error: %s.", clientInit.GetId(), err)
+					mux.Unsubscribe(output)
+					return err
+				}
+			} else {
+				counter = 0
+				break
 			}
 		}
 	}
 
+	log.Noticef("Client [%s] disconnected", clientInit.GetId())
 	mux.Unsubscribe(output)
 	return nil
 }
