@@ -169,21 +169,25 @@ func main() {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	conn, err := grpc.Dial(*serverAddr, opts...)
-	if err != nil {
-		log.Errorf("fail to dial: %v", err)
+	for {
+		conn, err := grpc.Dial(*serverAddr, opts...)
+		if err != nil {
+			log.Errorf("fail to dial: %v", err)
+		}
+		defer conn.Close()
+		client := pb.NewMessageClient(conn)
+
+		startChat(client, &pb.ClientInit{Id: "myclientid"})
+
+		// run a loop every 5 seconds
+		// for {
+		// 	sendToChipTool("13", true)
+		// 	time.Sleep(20 * time.Second)
+
+		// 	sendToChipTool("13", false)
+		// 	time.Sleep(20 * time.Second)
+		// }
+
+		log.Notice("Connection closed by server. Reconnecting now...")
 	}
-	defer conn.Close()
-	client := pb.NewMessageClient(conn)
-
-	startChat(client, &pb.ClientInit{Id: "myclientid"})
-
-	// run a loop every 5 seconds
-	// for {
-	// 	sendToChipTool("13", true)
-	// 	time.Sleep(20 * time.Second)
-
-	// 	sendToChipTool("13", false)
-	// 	time.Sleep(20 * time.Second)
-	// }
 }

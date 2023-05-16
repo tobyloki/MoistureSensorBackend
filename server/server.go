@@ -64,10 +64,16 @@ func (s *messageServer) MessageChat(clientInit *pb.ClientInit, stream pb.Message
 			Value:    message.Value,
 		}
 		if err := stream.Send(data); err != nil {
-			log.Noticef("Client [%s] disconnected: %s", clientInit.GetId(), err)
+			// delay 1 second
+			time.Sleep(1 * time.Second)
 
-			mux.Unsubscribe(output)
-			return err
+			// try again
+			if err2 := stream.Send(data); err2 != nil {
+				log.Noticef("Client [%s] disconnected: %s", clientInit.GetId(), err2)
+
+				mux.Unsubscribe(output)
+				return err2
+			}
 		}
 	}
 
