@@ -43,7 +43,17 @@ public static class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-        // NOTE: swagger docs won't work with AWS Lambda hosting. You'll have to upgrade to full ASP.NET Core API.
+        
+        // Configure CORS
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+            });
+        });
 
         // Add AWS Lambda hosting
         builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
@@ -58,6 +68,9 @@ public static class Program
         // }
 
         app.UseHttpsRedirection();
+        
+        // Enable CORS
+        app.UseCors();
 
         app.UseAuthorization();
         
