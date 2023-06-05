@@ -86,7 +86,14 @@ func startChat(client pb.MessageClient, clientInit *pb.ClientInit) {
 
 		if data.GetKey() == "state" {
 			onOff := data.GetValue() == "on"
-			sendToChipTool(data.GetDeviceId(), onOff)
+
+			// try to send to chip-tool 3 times before giving up
+			for i := 0; i < 3; i++ {
+				err := sendToChipTool(data.GetDeviceId(), onOff)
+				if err == nil {
+					break
+				}
+			}
 		}
 
 		// if error, assume the messages was intended to flip value
@@ -160,6 +167,14 @@ func sendToChipTool(deviceId string, onOff bool) error {
 		outputArray := strings.Split(string(output), "\n")
 		for _, line := range outputArray {
 			log.Info(line)
+			// if line contains status:, split it by space and get the last element
+			if strings.Contains(line, "status:") {
+				status := strings.Split(line, " ")[len(strings.Split(line, " "))-1]
+				if status != "0x0" {
+					// throw error
+					return fmt.Errorf("Command failed with status: %s\n", status)
+				}
+			}
 		}
 
 		return nil
